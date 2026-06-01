@@ -1,7 +1,7 @@
 <script setup>
-import TcpHandshakeVisualizer from './components/TcpHandshakeVisualizer.vue'
+import AppLayout from './layouts/AppLayout.vue'
 </script>
 
 <template>
-  <TcpHandshakeVisualizer />
+  <AppLayout />
 </template>

@@ -1,11 +1,11 @@
 # 计算机网络知识体系交互式展示系统 — 产品需求文档（PRD）
 
-| 文档版本 | v1.0 |
+| 文档版本 | v1.2 |
 |---------|------|
 | 编写日期 | 2026-06-01 |
 | 适用课程 | 《网络实习》 |
 | 项目名称 | 计算机网络知识体系交互式展示系统 |
-| 文档状态 | 初稿 |
+| 文档状态 | 已更新（第三部分后端选型 Java） |
 
 ---
 
@@ -21,18 +21,31 @@
 |------|-------------|------|
 | 第一部分：单项协议可视化 | 否 | 纯前端交互与动画 |
 | 第二部分：综合网络场景模拟 | 否 | 纯前端分步演示 |
-| 第三部分：知识体系与知识图谱 | 是 | 知识点 CRUD + 数据库持久化 |
+| 第三部分：知识体系与知识图谱 | 是 | **Java 后端** + 知识点 CRUD + 数据库持久化 |
 | 系统导航与首页 | 否 | 路由与模块入口 |
 
 ### 1.3 已确认选型（本项目）
 
 | 项 | 选型 |
 |----|------|
-| 第一部分协议 | **题目 2：TCP 三次握手与四次挥手**（已实现初版）+ **题目 1：DNS 域名解析**（待实现，可替换为其他题目） |
-| 前端 | Vue 3 + Vite + Vue Router + Tailwind CSS |
-| 后端 | Node.js + Express |
-| 数据库 | SQLite（开发/演示）+ 建表 SQL 脚本 |
-| 知识图谱 | 前端 JS 渲染（不要求图数据库存储） |
+| 第一部分协议 | **题目 2：TCP 三次握手与四次挥手**（✅ 已实现）+ **题目 5：路由转发**（✅ 已实现） |
+| 前端 | Vue 3 + Vite + Vue Router + Tailwind CSS + lucide-vue-next 图标 |
+| 后端（第三部分） | **Java 17+ / Spring Boot 3** + REST API（待开发） |
+| 持久层 | **MyBatis-Plus** 或 Spring Data JPA（二选一，推荐 MyBatis-Plus） |
+| 数据库 | SQLite（开发/演示）+ 建表 SQL 脚本（待开发） |
+| 知识图谱 | 前端 JS 渲染（不要求图数据库存储，待开发） |
+
+### 1.4 实现现状摘要（截至 v1.2）
+
+| 模块 | 状态 | 关键文件 |
+|------|------|----------|
+| 首页 + 全局导航 | ✅ | `HomeView.vue`、`AppLayout.vue`、`router/index.js` |
+| 题目 2 · TCP 握手/挥手 | ✅ | `TcpHandshakeVisualizer.vue` |
+| 题目 5 · 路由转发 | ✅ | `RoutingVisualizer.vue`、`RoutingTablePanel.vue` |
+| 综合场景模拟 | 待开发 | — |
+| 知识体系 + Java 后端 | 待开发 | `backend/` Spring Boot 工程 |
+
+两个协议页面均采用 **左栏拓扑与控制 + 右栏步骤详情/日志** 的统一布局，满足 COM-10～COM-15 交互规范。
 
 ---
 
@@ -56,23 +69,23 @@
 
 ### 2.4 成功标准（对齐评分要点）
 
-- 至少 2 个协议可视化页面可正常运行。
-- 综合场景步骤拆解正确，ARP 表与交换表动态更新。
-- 五层模型 6 个子标签页可用，知识点修改后刷新不丢失。
-- 具备首页导航，模块间可跳转。
-- README、建表脚本、演示截图齐全。
+- 至少 2 个协议可视化页面可正常运行。→ **已达成**（TCP + 路由转发）
+- 综合场景步骤拆解正确，ARP 表与交换表动态更新。→ 待开发
+- 五层模型 6 个子标签页可用，知识点修改后刷新不丢失。→ 待开发
+- 具备首页导航，模块间可跳转。→ **已达成**（首页 + 顶部导航 + 协议子路由）
+- README、建表脚本、演示截图齐全。→ 部分完成
 
 ---
 
 ## 3. 信息架构与页面地图
 
 ```
-/                           首页（系统介绍 + 模块导航）
-├── /protocol               协议可视化（子导航）
-│   ├── /protocol/tcp       题目2：TCP 三次握手 / 四次挥手
-│   └── /protocol/dns       题目1：DNS 域名解析
-├── /scenario               第二部分：综合网络场景模拟
-└── /knowledge              第三部分：知识体系
+/                           首页（系统介绍 + 模块导航卡片）
+├── /protocol               协议可视化（顶部下拉 + 移动端 Tab）
+│   ├── /protocol/tcp       题目2：TCP 三次握手 / 四次挥手 ✅
+│   └── /protocol/routing   题目5：路由转发 ✅
+├── /scenario               第二部分：综合网络场景模拟（待开发）
+└── /knowledge              第三部分：知识体系（待开发）
     ├── /knowledge/application   应用层
     ├── /knowledge/transport     传输层
     ├── /knowledge/network       网络层
@@ -91,8 +104,8 @@
 
 | 编号 | 需求 | 优先级 |
 |------|------|--------|
-| COM-01 | 展示系统名称、简介、三大模块入口卡片 | P0 |
-| COM-02 | 顶部或侧边全局导航，支持各主模块跳转 | P0 |
+| COM-01 | 展示系统名称、简介、各模块入口卡片（含完成/待开发状态） | P0 |
+| COM-02 | 顶部全局导航，支持首页与协议可视化子页面跳转 | P0 |
 | COM-03 | 当前路由高亮，支持浏览器前进/后退 | P1 |
 | COM-04 | 响应式布局，1280px 及以上为桌面优先 | P2 |
 
@@ -103,7 +116,7 @@
 | 编号 | 需求 | 优先级 |
 |------|------|--------|
 | COM-10 | 简洁网络拓扑图 | P0 |
-| COM-11 | 「开始 / 下一步 / 重置」控制按钮 | P0 |
+| COM-11 | 「开始 / 下一步 / 重置」控制按钮（TCP 页为「建立连接 / 下一步 / 释放连接 / 重置」） | P0 |
 | COM-12 | 协议执行步骤列表或时间线 | P0 |
 | COM-13 | 报文/数据帧在拓扑中的传递动画 | P0 |
 | COM-14 | 关键状态表或结果面板 | P0 |
@@ -113,20 +126,23 @@
 
 ### 4.2 第一部分：单项协议原理可视化（20 分）
 
-#### 4.2.1 题目 2 — TCP 三次握手与四次挥手
+#### 4.2.1 题目 2 — TCP 三次握手与四次挥手（✅ 已实现）
 
-**路由**：`/protocol/tcp`
+**路由**：`/protocol/tcp`  
+**组件**：`TcpView.vue` → `TcpHandshakeVisualizer.vue`
 
-| 编号 | 需求 | 优先级 | 验收标准 |
+| 编号 | 需求 | 优先级 | 实现状态 |
 |------|------|--------|----------|
-| TCP-01 | 展示 Client、Server 两端节点 | P0 | 拓扑清晰标注角色 |
-| TCP-02 | 提供「建立连接」「释放连接」按钮 | P0 | 文案与指导书一致 |
-| TCP-03 | 提供「开始/下一步/重置」分步控制 | P0 | 可单步推进 |
-| TCP-04 | 动画展示 SYN、SYN+ACK、ACK、FIN 报文传递 | P0 | 方向 C→S / S→C 可辨 |
-| TCP-05 | 实时展示 TCP 状态：CLOSED、LISTEN、SYN-SENT、SYN-RCVD、ESTABLISHED、FIN-WAIT-1/2、CLOSE-WAIT、LAST-ACK、TIME-WAIT | P0 | 每步状态与 RFC 793 一致 |
-| TCP-06 | 展示 seq/ack 及 ISN | P1 | 报文详情面板 |
-| TCP-07 | 握手/挥手完成后展示最终结果摘要 | P0 | 明确「连接已建立/已关闭」 |
-| TCP-08 | 报文详情含源/目的 MAC、IP（可选字段） | P2 | 增强展示 |
+| TCP-01 | 展示 Client、Server 两端节点 | P0 | ✅ 拓扑标注角色、MAC、IP |
+| TCP-02 | 提供「建立连接」「释放连接」按钮 | P0 | ✅ 文案与指导书一致 |
+| TCP-03 | 提供「下一步/重置」分步控制 | P0 | ✅ 握手 4 步 + 挥手 6 步可单步推进 |
+| TCP-04 | 动画展示 SYN、SYN+ACK、ACK、FIN 报文传递 | P0 | ✅ C→S / S→C 方向动画 |
+| TCP-05 | 实时展示 TCP 状态机 | P0 | ✅ 节点徽章 + 状态对照表 |
+| TCP-06 | 展示 seq/ack 及 ISN | P1 | ✅ 报文详情面板 + 拓扑下方 ISN 提示 |
+| TCP-07 | 握手/挥手完成后展示最终结果摘要 | P0 | ✅ 「连接已建立」「连接已关闭」横幅 |
+| TCP-08 | 报文详情含源/目的 MAC、IP | P2 | ✅ 已实现 |
+| TCP-09 | 协议执行步骤流日志 | P1 | ✅ 右侧步骤列表，最新步高亮 |
+| TCP-10 | 当前阶段进度条 | P2 | ✅ 握手/挥手各阶段进度可视化 |
 
 **状态机参考（建立连接）**
 
@@ -142,30 +158,83 @@ Client: ESTABLISHED → FIN-WAIT-1 → FIN-WAIT-2 → TIME-WAIT → CLOSED
 Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 ```
 
-> **现状**：`TcpHandshakeVisualizer.vue` 已实现核心逻辑，需将按钮文案调整为「建立连接」「释放连接」，并接入路由导航。
+**固定地址参数（实现值）**
+
+| 端 | MAC | IP |
+|----|-----|-----|
+| Client | 00:1A:2B:3C:4D:5E | 192.168.1.100:52431 |
+| Server | 00:AA:BB:CC:DD:EE | 203.0.113.50:443 |
+
+**步骤划分（实现值）**
+
+| 阶段 | 步骤数 | 概要 |
+|------|--------|------|
+| 三次握手 | 4 步 | SYN → SYN+ACK → ACK → 双方 ESTABLISHED |
+| 四次挥手 | 6 步 | FIN → ACK → FIN-WAIT-2 → FIN → ACK → 双方 CLOSED |
 
 ---
 
-#### 4.2.2 题目 1 — DNS 域名解析（第二协议，待实现）
+#### 4.2.2 题目 5 — 路由转发（✅ 已实现）
 
-**路由**：`/protocol/dns`
+**路由**：`/protocol/routing`  
+**组件**：`RoutingView.vue` → `RoutingVisualizer.vue` + `RoutingTablePanel.vue`
 
-| 编号 | 需求 | 优先级 | 验收标准 |
+| 编号 | 需求 | 优先级 | 实现状态 |
 |------|------|--------|----------|
-| DNS-01 | 展示 Client、DNS Server，域名输入框 | P0 | 用户可输入域名 |
-| DNS-02 | 点击查询后分步展示 DNS 查询过程 | P0 | 支持开始/下一步/重置 |
-| DNS-03 | 支持演示「缓存命中」与「缓存未命中」两种模式 | P0 | 可通过切换或首次/二次查询体现 |
-| DNS-04 | 展示最终解析 IP 地址 | P0 | 结果面板明确显示 |
-| DNS-05 | DNS 缓存表动态查询与更新 | P0 | 表格随步骤变化 |
-| DNS-06 | 报文在 Client 与 DNS Server 间传递动画 | P1 | 与 TCP 页风格统一 |
+| ROUT-01 | 展示跨网段拓扑：H1、R1、R2、H2 及三段网段 | P0 | ✅ 三网段标注 192.168.1.0/24、10.0.0.0/24、172.16.0.0/24 |
+| ROUT-02 | 提供「开始 / 下一步 / 重置」分步控制 | P0 | ✅ 共 6 步可单步推进 |
+| ROUT-03 | IP 数据报在链路上的传递动画 | P0 | ✅ 链路高亮 + 报文气泡动画 |
+| ROUT-04 | 展示 R1、R2 路由表，查表时高亮匹配行 | P0 | ✅ `RoutingTablePanel` 动态高亮 |
+| ROUT-05 | 每步展示处理设备、查表结果、下一跳、出接口 | P0 | ✅ 右侧「当前步骤详情」面板 |
+| ROUT-06 | 转发步骤日志列表 | P1 | ✅ 右侧「转发步骤」时间线 |
+| ROUT-07 | 转发完成后展示路径摘要 | P0 | ✅ 「转发完成」结果横幅 |
+| ROUT-08 | 当前处理节点/链路视觉反馈 | P1 | ✅ 节点边框、链路颜色随步骤变化 |
+
+**拓扑与地址规划（实现值）**
+
+| 设备 | IP | 说明 |
+|------|-----|------|
+| H1 | 192.168.1.10 | 源主机，网段 A |
+| R1 | 192.168.1.1 / 10.0.0.1 | 连接网段 A 与 B |
+| R2 | 10.0.0.2 / 172.16.0.1 | 连接网段 B 与 C |
+| H2 | 172.16.0.20 | 目的主机，网段 C |
+
+**R1 路由表（实现值）**
+
+| 目的网络 | 掩码 | 下一跳 | 接口 |
+|----------|------|--------|------|
+| 192.168.1.0 | /24 | 直连 | eth0 |
+| 10.0.0.0 | /24 | 直连 | eth1 |
+| 172.16.0.0 | /24 | 10.0.0.2 | eth1 |
+
+**R2 路由表（实现值）**
+
+| 目的网络 | 掩码 | 下一跳 | 接口 |
+|----------|------|--------|------|
+| 172.16.0.0 | /24 | 直连 | eth1 |
+| 10.0.0.0 | /24 | 直连 | eth0 |
+| 192.168.1.0 | /24 | 10.0.0.1 | eth0 |
 
 **参考拓扑**
 
 ```
-[Client] ---- [Local DNS Server]
-                |
-           (递归/迭代查询，可选展示)
+网段 A                网段 B                网段 C
+192.168.1.0/24       10.0.0.0/24          172.16.0.0/24
+
+[H1] —— [R1] —— [R2] —— [H2]
+ .10    .1/.1      .2/.1    .20
 ```
+
+**步骤划分（实现值，共 6 步）**
+
+| 步骤 | 名称 | 概要 |
+|------|------|------|
+| 1 | H1 发送数据报 | 目的不在本地网段，发往默认网关 R1 |
+| 2 | R1 查路由表 | 匹配 172.16.0.0/24，下一跳 10.0.0.2 |
+| 3 | R1 → R2 转发 | 经网段 B 送达 R2 |
+| 4 | R2 查路由表 | 匹配直连网段 172.16.0.0/24 |
+| 5 | R2 → H2 转发 | 经网段 C 送达 H2 |
+| 6 | H2 接收数据报 | 转发过程结束 |
 
 ---
 
@@ -243,7 +312,22 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 
 ### 4.4 第三部分：知识体系与知识图谱（15 分）
 
-**路由**：`/knowledge/*`
+**路由**：`/knowledge/*`  
+**后端**：Java Spring Boot，独立工程目录 `backend/`，默认端口 `8080`
+
+#### 4.4.0 后端实现约定
+
+| 编号 | 需求 | 优先级 |
+|------|------|--------|
+| BE-01 | Spring Boot 提供 REST API，路径前缀 `/api` | P0 |
+| BE-02 | 统一 JSON 响应包装（`code` / `message` / `data`） | P0 |
+| BE-03 | 全局异常处理，参数校验失败返回 40001 | P0 |
+| BE-04 | 配置 CORS，允许 Vue 开发服务器（`localhost:5173`）跨域访问 | P0 |
+| BE-05 | 应用启动时自动执行 `schema.sql`、`seed.sql` 初始化 SQLite | P0 |
+| BE-06 | Controller / Service / Mapper 分层，五层知识点分表访问 | P0 |
+| BE-07 | 本地演示无登录鉴权 | — |
+
+**推荐包结构**：`com.classdemo.network.{controller, service, mapper, entity, dto, config, common}`
 
 #### 4.4.1 五层模型子页面（应用/传输/网络/数据链路/物理）
 
@@ -259,7 +343,7 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 | KN-06 | 编辑知识点 | P0 | PUT API |
 | KN-07 | 删除知识点 | P0 | DELETE API |
 | KN-08 | 关键词模糊查询 | P0 | GET API `keyword` 参数 |
-| KN-09 | 修改持久化，刷新不丢失 | P0 | SQLite |
+| KN-09 | 修改持久化，刷新不丢失 | P0 | SQLite（Java 后端读写） |
 
 **知识点字段**
 
@@ -307,7 +391,7 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 | NFR-02 | 性能 | 协议动画流畅，单页切换 < 500ms |
 | NFR-03 | 可维护性 | 前后端分离，目录结构清晰 |
 | NFR-04 | 安全 | 本地教学演示，无鉴权；生产环境不在范围 |
-| NFR-05 | 部署 | `npm run dev` 启动前端；后端独立端口；提供 README |
+| NFR-05 | 部署 | 前端 `npm run dev`（5173）；Java 后端 `mvn spring-boot:run` 或 IDE 启动（8080）；提供 README |
 | NFR-06 | 规范 | Git 分阶段 commit，禁止一次性提交全部代码 |
 
 ---
@@ -367,22 +451,43 @@ CREATE INDEX idx_knowledge_application_title ON knowledge_application(title);
 
 ### 6.4 初始数据
 
-- 提供 `server/db/schema.sql` 建表脚本
-- 提供 `server/db/seed.sql` 每层至少 5 条示例知识点
-- 提供 `server/db/network.db` 或在首次启动时自动初始化
+- 提供 `backend/src/main/resources/db/schema.sql` 建表脚本
+- 提供 `backend/src/main/resources/db/seed.sql` 每层至少 5 条示例知识点
+- SQLite 数据库文件 `backend/data/network.db`，或在首次启动时由 Spring Boot `spring.sql.init.*` 自动初始化
+
+**Spring Boot 配置示例（`application.yml`）**
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:sqlite:./data/network.db
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/seed.sql
+```
 
 ---
 
 ## 7. 后端 API 接口文档
 
+> **实现语言**：Java（Spring Boot 3）。以下接口约定供前后端联调；Controller 返回统一包装类 `ApiResponse<T>`。
+
 ### 7.1 通用约定
 
 | 项 | 说明 |
 |----|------|
-| Base URL | `http://localhost:3000/api` |
+| 实现框架 | Spring Boot 3 + Spring Web |
+| Base URL | `http://localhost:8080/api` |
 | 数据格式 | JSON，`Content-Type: application/json; charset=utf-8` |
 | 字符编码 | UTF-8 |
 | 时间格式 | ISO 8601，如 `2026-06-01T10:00:00.000Z` |
+| 跨域 | 开发环境由 `@CrossOrigin` 或 `WebMvcConfigurer` 放行 `http://localhost:5173` |
 
 ### 7.2 统一响应结构
 
@@ -430,6 +535,19 @@ CREATE INDEX idx_knowledge_application_title ON knowledge_application(title);
 | 40402 | 分层 key 无效 |
 | 50000 | 服务器内部错误 |
 
+**Java 统一响应类（参考）**
+
+```java
+public record ApiResponse<T>(int code, String message, T data) {
+    public static <T> ApiResponse<T> ok(T data) {
+        return new ApiResponse<>(0, "ok", data);
+    }
+    public static <T> ApiResponse<T> fail(int code, String message) {
+        return new ApiResponse<>(code, message, null);
+    }
+}
+```
+
 ### 7.4 分层枚举 `layerKey`
 
 | layerKey | 中文名 | 知识点表 |
@@ -440,11 +558,28 @@ CREATE INDEX idx_knowledge_application_title ON knowledge_application(title);
 | `datalink` | 数据链路层 | knowledge_datalink |
 | `physical` | 物理层 | knowledge_physical |
 
+### 7.5 Spring Boot Controller 映射（参考）
+
+| HTTP | 路径 | Controller 方法 | 说明 |
+|------|------|-----------------|------|
+| GET | `/api/health` | `HealthController.check()` | 健康检查 |
+| GET | `/api/layers` | `LayerController.listAll()` | 五层元数据列表 |
+| GET | `/api/layers/{layerKey}` | `LayerController.getOne()` | 单层元数据 |
+| PUT | `/api/layers/{layerKey}` | `LayerController.update()` | 更新元数据（P1） |
+| GET | `/api/layers/{layerKey}/knowledge` | `KnowledgeController.list()` | 分页 + keyword |
+| GET | `/api/layers/{layerKey}/knowledge/{id}` | `KnowledgeController.getById()` | 详情 |
+| POST | `/api/layers/{layerKey}/knowledge` | `KnowledgeController.create()` | 新增 |
+| PUT | `/api/layers/{layerKey}/knowledge/{id}` | `KnowledgeController.update()` | 更新 |
+| DELETE | `/api/layers/{layerKey}/knowledge/{id}` | `KnowledgeController.delete()` | 删除 |
+| GET | `/api/knowledge-graph` | `KnowledgeGraphController.aggregate()` | 图谱聚合（可选） |
+
+> `layerKey` 无效时抛出业务异常，由 `GlobalExceptionHandler` 转换为 `40402`。
+
 ---
 
-### 7.5 接口清单
+### 7.6 接口清单
 
-#### 7.5.1 健康检查
+#### 7.6.1 健康检查
 
 ```
 GET /api/health
@@ -462,7 +597,7 @@ GET /api/health
 
 ---
 
-#### 7.5.2 获取所有分层元数据
+#### 7.6.2 获取所有分层元数据
 
 ```
 GET /api/layers
@@ -486,7 +621,7 @@ GET /api/layers
 
 ---
 
-#### 7.5.3 获取单层元数据
+#### 7.6.3 获取单层元数据
 
 ```
 GET /api/layers/:layerKey
@@ -502,7 +637,7 @@ GET /api/layers/:layerKey
 
 ---
 
-#### 7.5.4 更新单层元数据（可选，P1）
+#### 7.6.4 更新单层元数据（可选，P1）
 
 ```
 PUT /api/layers/:layerKey
@@ -520,7 +655,7 @@ PUT /api/layers/:layerKey
 
 ---
 
-#### 7.5.5 分页查询知识点列表
+#### 7.6.5 分页查询知识点列表
 
 ```
 GET /api/layers/:layerKey/knowledge
@@ -566,7 +701,7 @@ GET /api/layers/transport/knowledge?page=1&pageSize=10&keyword=TCP
 
 ---
 
-#### 7.5.6 获取知识点详情
+#### 7.6.6 获取知识点详情
 
 ```
 GET /api/layers/:layerKey/knowledge/:id
@@ -576,7 +711,7 @@ GET /api/layers/:layerKey/knowledge/:id
 
 ---
 
-#### 7.5.7 新增知识点
+#### 7.6.7 新增知识点
 
 ```
 POST /api/layers/:layerKey/knowledge
@@ -604,7 +739,7 @@ POST /api/layers/:layerKey/knowledge
 
 ---
 
-#### 7.5.8 更新知识点
+#### 7.6.8 更新知识点
 
 ```
 PUT /api/layers/:layerKey/knowledge/:id
@@ -623,7 +758,7 @@ PUT /api/layers/:layerKey/knowledge/:id
 
 ---
 
-#### 7.5.9 删除知识点
+#### 7.6.9 删除知识点
 
 ```
 DELETE /api/layers/:layerKey/knowledge/:id
@@ -637,7 +772,7 @@ DELETE /api/layers/:layerKey/knowledge/:id
 
 ---
 
-#### 7.5.10 知识图谱聚合数据（可选便捷接口）
+#### 7.6.10 知识图谱聚合数据（可选便捷接口）
 
 ```
 GET /api/knowledge-graph
@@ -676,7 +811,7 @@ GET /api/knowledge-graph
 export default {
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true }
+      '/api': { target: 'http://localhost:8080', changeOrigin: true }
     }
   }
 }
@@ -710,11 +845,11 @@ export function createKnowledge(layerKey, body) {
 
 ### 8.4 纯前端模块（无 API）
 
-| 模块 | 数据方式 |
-|------|----------|
-| TCP 可视化 | 组件内步骤配置 + 状态机 |
-| DNS 可视化 | 组件内步骤配置 |
-| 综合场景 | `src/data/scenarioSteps.js` JSON 驱动 |
+| 模块 | 路由 | 数据方式 | 状态 |
+|------|------|----------|------|
+| TCP 可视化 | `/protocol/tcp` | `TcpHandshakeVisualizer.vue` 内 `handshakeSteps` / `waveSteps` + 状态机 | ✅ 已实现 |
+| 路由转发 | `/protocol/routing` | `RoutingVisualizer.vue` 内 `steps` + 路由表常量 | ✅ 已实现 |
+| 综合场景 | `/scenario` | `src/data/scenarioSteps.js` JSON 驱动（规划） | 待开发 |
 
 ---
 
@@ -723,30 +858,45 @@ export function createKnowledge(layerKey, body) {
 ```
 ClassDemo/
 ├── docs/
-│   └── PRD.md                 # 本文档
-├── src/                       # 前端
-│   ├── api/
+│   └── PRD.md                      # 本文档
+├── src/                            # 前端
 │   ├── components/
-│   │   ├── layout/            # 导航、页头
-│   │   ├── protocol/          # TCP、DNS 可视化
-│   │   ├── scenario/          # 综合场景
-│   │   └── knowledge/         # 五层页、图谱
-│   ├── data/
-│   │   └── scenarioSteps.js
+│   │   ├── TcpHandshakeVisualizer.vue   # 题目2 TCP 可视化 ✅
+│   │   ├── RoutingVisualizer.vue        # 题目5 路由转发 ✅
+│   │   └── RoutingTablePanel.vue        # 路由表面板 ✅
+│   ├── layouts/
+│   │   └── AppLayout.vue                # 顶部导航 + 协议下拉 ✅
 │   ├── views/
+│   │   ├── HomeView.vue                 # 首页模块卡片 ✅
+│   │   └── protocol/
+│   │       ├── TcpView.vue              # ✅
+│   │       └── RoutingView.vue          # ✅
 │   ├── router/
+│   │   └── index.js                     # 路由配置 ✅
+│   ├── api/                             # 第三部分 API 封装（待开发）
+│   ├── data/
+│   │   └── scenarioSteps.js             # 综合场景（待开发）
 │   ├── App.vue
 │   └── main.js
-├── server/                    # 后端
-│   ├── db/
-│   │   ├── schema.sql
-│   │   ├── seed.sql
-│   │   └── network.db
-│   ├── routes/
-│   │   ├── layers.js
-│   │   └── knowledge.js
-│   ├── app.js
-│   └── package.json
+├── backend/                         # Java 后端（第三部分，待开发）
+│   ├── pom.xml                      # Maven 依赖：Spring Boot、SQLite JDBC、MyBatis-Plus
+│   ├── data/
+│   │   └── network.db               # SQLite 数据库文件（运行时生成）
+│   └── src/main/
+│       ├── java/com/classdemo/network/
+│       │   ├── NetworkApplication.java
+│       │   ├── controller/          # LayerController、KnowledgeController
+│       │   ├── service/
+│       │   ├── mapper/
+│       │   ├── entity/
+│       │   ├── dto/
+│       │   ├── config/              # CorsConfig、MyBatisConfig
+│       │   └── common/              # ApiResponse、GlobalExceptionHandler
+│       └── resources/
+│           ├── application.yml
+│           └── db/
+│               ├── schema.sql
+│               └── seed.sql
 ├── README.md
 └── package.json
 ```
@@ -757,10 +907,10 @@ ClassDemo/
 
 | 日期 | 里程碑 | 交付物 |
 |------|--------|--------|
-| 6/1 | 需求分析与仓库 | PRD、GitHub 仓库、路由骨架 |
-| 6/2 | 协议可视化 | TCP 完善 + DNS（或第二协议） |
+| 6/1 | 需求分析与仓库 | PRD、GitHub 仓库、路由骨架 ✅ |
+| 6/2 | 协议可视化 | TCP 完善 + 路由转发 ✅ |
 | 6/5 | 综合场景 | `/scenario` 页面主体 |
-| 6/8 | 知识体系 + DB | 后端 API、五层 Tab、CRUD |
+| 6/8 | 知识体系 + DB | Java Spring Boot API、五层 Tab、CRUD |
 | 6/9 | 整合 | 知识图谱、导航打通 |
 | 6/12 | 提交 | README、设计方案、演示视频 |
 
@@ -770,10 +920,11 @@ ClassDemo/
 
 ### 11.1 第一部分
 
-- [ ] 至少 2 个协议页面
-- [ ] 拓扑 + 开始/下一步/重置
-- [ ] 报文动画 + 状态/表格变化
-- [ ] TCP 含建立连接、释放连接
+- [x] 至少 2 个协议页面（TCP + 路由转发）
+- [x] 拓扑 + 开始/下一步/重置
+- [x] 报文/数据包动画 + 状态/表格变化
+- [x] TCP 含建立连接、释放连接
+- [x] 路由转发含路由表查表高亮与路径摘要
 
 ### 11.2 第二部分
 
@@ -785,15 +936,17 @@ ClassDemo/
 ### 11.3 第三部分
 
 - [ ] 五层 + 知识图谱共 6 个 Tab
-- [ ] 知识点存数据库
+- [ ] Java Spring Boot 后端可独立启动（8080）
+- [ ] 知识点存 SQLite 数据库
 - [ ] 增删改查 + 模糊查询 + 分页
 - [ ] 刷新后数据不丢失
+- [ ] 前端 Vite 代理 `/api` → 8080 联调通过
 
 ### 11.4 工程
 
-- [ ] 首页导航
+- [x] 首页导航（含协议可视化下拉与子路由）
 - [ ] README 完整
-- [ ] schema.sql / seed.sql
+- [ ] `backend/src/main/resources/db/schema.sql` / `seed.sql`
 - [ ] Git 分阶段提交
 
 ---
@@ -802,13 +955,23 @@ ClassDemo/
 
 ### 12.1 前后端技术栈版本建议
 
+**前端**
+
 | 依赖 | 版本 |
 |------|------|
-| Node.js | ≥ 18 |
+| Node.js | ≥ 18（仅前端构建与 dev server） |
 | Vue | ^3.5 |
 | Vite | ^6 |
-| Express | ^4 |
-| better-sqlite3 或 sql.js | 最新稳定版 |
+
+**后端（第三部分）**
+
+| 依赖 | 版本 |
+|------|------|
+| JDK | 17 或 21（LTS） |
+| Spring Boot | ^3.2 |
+| MyBatis-Plus | ^3.5（或 Spring Data JPA） |
+| SQLite JDBC | 最新稳定版（`org.xerial:sqlite-jdbc`） |
+| Maven | ≥ 3.8 |
 
 ### 12.2 参考资料
 
@@ -821,3 +984,5 @@ ClassDemo/
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v1.0 | 2026-06-01 | 初稿，基于指导书与题目 2 选型 |
+| v1.1 | 2026-06-01 | 对齐已实现页面：题目 2 TCP、题目 5 路由转发；更新信息架构、目录结构与验收清单 |
+| v1.2 | 2026-06-01 | 第三部分后端选型改为 Java Spring Boot；更新 API 端口、目录结构、部署与验收说明 |

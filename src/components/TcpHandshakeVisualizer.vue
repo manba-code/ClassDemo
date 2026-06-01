@@ -160,7 +160,7 @@
             :disabled="controlsDisabled || mode === 'handshake'"
             @click="startHandshake"
           >
-            开始握手
+            建立连接
           </button>
           <button
             type="button"
@@ -177,11 +177,117 @@
             :disabled="controlsDisabled || mode !== 'established'"
             @click="startWave"
           >
-            开始挥手
+            释放连接
           </button>
           <button type="button" class="btn-ghost" :disabled="isAnimating" @click="resetAll">
             重置
           </button>
+        </div>
+
+        <!-- Result banner -->
+        <Transition name="result-fade">
+          <div
+            v-if="mode === 'established'"
+            class="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-5 shadow-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <div class="flex items-start gap-3">
+              <CheckCircle2 class="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p class="text-base font-semibold text-emerald-900">连接已建立</p>
+                <p class="text-sm text-emerald-700 mt-1 font-mono">
+                  Client = ESTABLISHED · Server = ESTABLISHED
+                </p>
+                <p class="text-xs text-emerald-600/80 mt-2">
+                  三次握手完成，TCP 连接就绪，可进行数据传输。点击「释放连接」开始四次挥手。
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else-if="mode === 'done'"
+            class="rounded-xl border-2 border-slate-300 bg-slate-100 p-5 shadow-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <div class="flex items-start gap-3">
+              <XCircle class="w-6 h-6 text-slate-600 shrink-0 mt-0.5" />
+              <div>
+                <p class="text-base font-semibold text-slate-900">连接已关闭</p>
+                <p class="text-sm text-slate-700 mt-1 font-mono">
+                  Client = CLOSED · Server = CLOSED
+                </p>
+                <p class="text-xs text-slate-500 mt-2">
+                  四次挥手完成，TCP 连接已释放。点击「重置」可重新开始演示。
+                </p>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
+        <!-- TCP state table -->
+        <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <h2 class="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 pt-4 pb-2 flex items-center gap-2">
+            <Table2 class="w-3.5 h-3.5" />
+            TCP 连接状态对照表
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-y border-slate-200 bg-slate-50 text-left">
+                  <th class="px-4 py-2.5 font-medium text-slate-600 text-xs">端</th>
+                  <th class="px-4 py-2.5 font-medium text-slate-600 text-xs">IP 地址</th>
+                  <th class="px-4 py-2.5 font-medium text-slate-600 text-xs">TCP 状态</th>
+                  <th class="px-4 py-2.5 font-medium text-slate-600 text-xs">说明</th>
+                </tr>
+              </thead>
+              <tbody class="font-mono text-xs">
+                <tr
+                  class="border-b border-slate-100 transition-colors duration-300"
+                  :class="clientRowClass"
+                >
+                  <td class="px-4 py-3">
+                    <span class="inline-flex items-center gap-1.5 font-sans font-medium text-slate-800">
+                      <Monitor class="w-3.5 h-3.5 text-teal-600" />
+                      Client
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600">{{ clientIp }}</td>
+                  <td class="px-4 py-3">
+                    <span
+                      class="inline-block px-2 py-1 rounded-md border font-semibold transition-all duration-300"
+                      :class="stateBadgeClass(clientState)"
+                    >
+                      {{ clientState }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500 font-sans">{{ clientStateDesc }}</td>
+                </tr>
+                <tr
+                  class="transition-colors duration-300"
+                  :class="serverRowClass"
+                >
+                  <td class="px-4 py-3">
+                    <span class="inline-flex items-center gap-1.5 font-sans font-medium text-slate-800">
+                      <Server class="w-3.5 h-3.5 text-indigo-600" />
+                      Server
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600">{{ serverIp }}</td>
+                  <td class="px-4 py-3">
+                    <span
+                      class="inline-block px-2 py-1 rounded-md border font-semibold transition-all duration-300"
+                      :class="stateBadgeClass(serverState)"
+                    >
+                      {{ serverState }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500 font-sans">{{ serverStateDesc }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Step progress -->
@@ -287,7 +393,7 @@
               </div>
             </li>
             <li v-if="!logEntries.length" class="text-slate-400 py-4 text-center">
-              点击「开始握手」或「开始挥手」后，使用「下一步」单步推进
+              点击「建立连接」或「释放连接」后，使用「下一步」单步推进
             </li>
           </ol>
         </div>
@@ -298,7 +404,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { Monitor, Server, FileCode, ListOrdered } from 'lucide-vue-next'
+import { Monitor, Server, FileCode, ListOrdered, Table2, CheckCircle2, XCircle } from 'lucide-vue-next'
 
 /** @typedef {'CLOSED'|'LISTEN'|'SYN-SENT'|'SYN-RCVD'|'ESTABLISHED'|'FIN-WAIT-1'|'FIN-WAIT-2'|'CLOSE-WAIT'|'LAST-ACK'|'TIME-WAIT'} TcpState */
 
@@ -387,6 +493,37 @@ const packetBubbleClass = computed(() => {
   return dir === 'c2s'
     ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-md'
     : 'bg-indigo-50 border-indigo-300 text-indigo-800 shadow-md'
+})
+
+const STATE_DESC = {
+  CLOSED: '连接不存在',
+  LISTEN: '等待客户端连接',
+  'SYN-SENT': '已发 SYN，等待 SYN+ACK',
+  'SYN-RCVD': '已收 SYN，等待 ACK',
+  ESTABLISHED: '连接已建立，可传输数据',
+  'FIN-WAIT-1': '已发 FIN，等待 ACK',
+  'FIN-WAIT-2': '已收 ACK，等待对端 FIN',
+  'CLOSE-WAIT': '已收 FIN，等待应用关闭',
+  'LAST-ACK': '已发 FIN，等待最终 ACK',
+  'TIME-WAIT': '等待 2MSL 后关闭',
+}
+
+const clientStateDesc = computed(() => STATE_DESC[clientState.value] ?? '—')
+const serverStateDesc = computed(() => STATE_DESC[serverState.value] ?? '—')
+
+const clientRowClass = computed(() => {
+  if (clientState.value === 'ESTABLISHED') return 'bg-emerald-50/60'
+  if (clientState.value === 'CLOSED') return 'bg-slate-50/80'
+  if (clientState.value.includes('WAIT') || clientState.value === 'TIME-WAIT') return 'bg-amber-50/50'
+  return 'bg-teal-50/30'
+})
+
+const serverRowClass = computed(() => {
+  if (serverState.value === 'ESTABLISHED') return 'bg-emerald-50/60'
+  if (serverState.value === 'CLOSED') return 'bg-slate-50/80'
+  if (serverState.value === 'CLOSE-WAIT' || serverState.value === 'LAST-ACK') return 'bg-indigo-50/40'
+  if (serverState.value.includes('SYN')) return 'bg-teal-50/30'
+  return ''
 })
 
 function nodeClass(side) {
@@ -683,7 +820,7 @@ function startHandshake() {
   logEntries.value.push({
     stepNum: 0,
     stepName: '准备握手',
-    summary: 'Client=CLOSED, Server=LISTEN，点击「下一步」发送 SYN',
+    summary: 'Client=CLOSED, Server=LISTEN，点击「下一步」开始三次握手',
   })
 }
 
@@ -755,6 +892,20 @@ watch(logEntries, () => {
   to {
     opacity: 1;
     transform: translateY(-50%) scale(1);
+  }
+}
+
+.result-fade-enter-active {
+  animation: result-slide-in 0.35s ease-out;
+}
+@keyframes result-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
