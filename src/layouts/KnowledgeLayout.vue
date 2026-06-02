@@ -1,5 +1,4 @@
 <script setup>
-import { computed } from 'vue'
 import { useRoute, RouterLink, RouterView } from 'vue-router'
 import { Layers, GitGraph } from 'lucide-vue-next'
 
@@ -14,8 +13,6 @@ const layerTabs = [
 ]
 
 const graphTab = { to: '/knowledge/graph', label: '知识图谱', name: 'knowledge-graph' }
-
-const isGraphRoute = computed(() => route.name === graphTab.name)
 
 function isTabActive(tab) {
   return route.name === tab.name
@@ -52,13 +49,6 @@ function isTabActive(tab) {
         {{ graphTab.label }}
       </RouterLink>
     </nav>
-
-    <section
-      v-if="isGraphRoute"
-      class="rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-2 mb-4 text-sm text-violet-800"
-    >
-      树形知识结构可视化（阶段 H 完善交互与图库）
-    </section>
 
     <RouterView />
   </div>
