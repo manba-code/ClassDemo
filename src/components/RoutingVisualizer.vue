@@ -105,21 +105,30 @@
         </div>
 
         <!-- Controls -->
-        <div
-          class="flex flex-wrap gap-2 p-4 rounded-xl border border-slate-200 bg-white shadow-sm"
-          role="toolbar"
+        <PlaybackControls
+          :can-prev="canPrev"
+          :can-next="canNextStep"
+          :can-pause="isAnimating"
+          :is-paused="playback.isPaused.value"
+          :is-playing="playback.isPlaying.value"
+          :can-replay="mode !== 'idle'"
+          :can-reset="true"
+          :step-display="stepDisplay"
+          :playback-speed="playback.playbackSpeed.value"
+          :speed-options="playback.speedOptions"
+          @prev="prevStep"
+          @next="nextStep"
+          @pause="playback.togglePause()"
+          @replay="replayFromStart"
+          @reset="resetAll()"
+          @speed="playback.setSpeed"
         >
-          <button type="button" class="btn-primary" :disabled="controlsDisabled || mode === 'running'" @click="start">
-            开始
-          </button>
-          <button type="button" class="btn-secondary" :disabled="controlsDisabled || !canNextStep" @click="nextStep">
-            下一步
-            <span class="text-slate-500 ml-1">({{ stepDisplay }})</span>
-          </button>
-          <button type="button" class="btn-ghost" :disabled="isAnimating" @click="resetAll">
-            重置
-          </button>
-        </div>
+          <template #leading>
+            <button type="button" class="btn-primary" :disabled="controlsDisabled || mode === 'running'" @click="start">
+              开始
+            </button>
+          </template>
+        </PlaybackControls>
 
         <!-- Result -->
         <Transition name="result-fade">
@@ -187,7 +196,9 @@
           <p v-else class="text-xs text-slate-400 font-mono">点击「开始」后使用「下一步」推进</p>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white flex flex-col flex-1 min-h-[260px] overflow-hidden shadow-sm">
+        <PacketStructurePanel :layers="packetLayers" />
+
+        <div class="rounded-2xl border border-slate-200 bg-white flex flex-col flex-1 min-h-[200px] overflow-hidden shadow-sm">
           <h2 class="text-sm font-semibold text-slate-800 p-4 pb-2 flex items-center gap-2 shrink-0">
             <ListOrdered class="w-4 h-4 text-indigo-600" />
             转发步骤
@@ -213,7 +224,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   Monitor,
   Server,
@@ -223,10 +234,14 @@ import {
   CheckCircle2,
 } from 'lucide-vue-next'
 import RoutingTablePanel from './RoutingTablePanel.vue'
+import { buildRoutingPacketLayers } from '../utils/buildPacketLayers.js'
+import { usePlayback } from '../composables/usePlayback.js'
+import PlaybackControls from './PlaybackControls.vue'
+import PacketStructurePanel from './PacketStructurePanel.vue'
 
 const srcIp = '192.168.1.10'
 const dstIp = '172.16.0.20'
-const ANIM_MS = 850
+const ANIM_MS_BASE = ref(850)
 
 const nodes = [
   { id: 'h1', label: 'H1', ip: '192.168.1.10', type: 'host', icon: Monitor, iconColor: 'text-teal-600' },
@@ -273,6 +288,39 @@ const highlightRow = ref(-1)
 const currentHop = ref('')
 const logEntries = ref([])
 const logContainer = ref(null)
+const prevStepSnapshot = ref(null)
+
+function captureSnapshot() {
+  return {
+    mode: mode.value,
+    currentStepIndex: currentStepIndex.value,
+    activeRouter: activeRouter.value,
+    highlightRow: highlightRow.value,
+    currentHop: currentHop.value,
+    logEntries: logEntries.value.map((e) => ({ ...e })),
+    prevStepSnapshot: prevStepSnapshot.value ? { ...prevStepSnapshot.value } : null,
+  }
+}
+
+function restoreSnapshot(snap) {
+  mode.value = snap.mode
+  currentStepIndex.value = snap.currentStepIndex
+  activeRouter.value = snap.activeRouter
+  highlightRow.value = snap.highlightRow
+  currentHop.value = snap.currentHop
+  logEntries.value = snap.logEntries.map((e) => ({ ...e }))
+  prevStepSnapshot.value = snap.prevStepSnapshot ? { ...snap.prevStepSnapshot } : null
+}
+
+const playback = usePlayback({ captureSnapshot, restoreSnapshot, baseAnimMsRef: ANIM_MS_BASE })
+
+const currentStep = computed(() =>
+  currentStepIndex.value >= 0 ? steps[currentStepIndex.value] : null
+)
+
+const packetLayers = computed(() =>
+  buildRoutingPacketLayers(currentStep.value, prevStepSnapshot.value)
+)
 
 let animFrame = null
 
@@ -389,15 +437,15 @@ const phaseLabel = computed(() => {
   return map[mode.value] ?? mode.value
 })
 
-const controlsDisabled = computed(() => isAnimating.value)
+const controlsDisabled = computed(() => isAnimating.value || playback.isPlaying.value)
 const canNextStep = computed(
-  () => !isAnimating.value && mode.value === 'running' && currentStepIndex.value < steps.length - 1
+  () => !controlsDisabled.value && mode.value === 'running' && currentStepIndex.value < steps.length - 1
+)
+const canPrev = computed(
+  () => !controlsDisabled.value && mode.value === 'running' && currentStepIndex.value >= 0
 )
 const stepDisplay = computed(() =>
   mode.value === 'running' ? `${Math.max(0, currentStepIndex.value + 1)}/${steps.length}` : '—'
-)
-const currentStep = computed(() =>
-  currentStepIndex.value >= 0 ? steps[currentStepIndex.value] : null
 )
 
 const packetStyle = computed(() => ({
@@ -441,22 +489,20 @@ function runAnimation(linkIndex, onComplete) {
   activeLinkIndex.value = linkIndex
   isAnimating.value = true
   packetProgress.value = 0
-  const start = performance.now()
+  const duration = ANIM_MS_BASE.value / playback.playbackSpeed.value
 
-  function frame(now) {
-    const t = Math.min(1, (now - start) / ANIM_MS)
-    packetProgress.value = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-    if (t < 1) {
-      animFrame = requestAnimationFrame(frame)
-    } else {
+  playback.runPausableAnimation(
+    duration,
+    (t) => {
+      packetProgress.value = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+    },
+    () => {
       isAnimating.value = false
       activeLinkIndex.value = -1
       packetProgress.value = 0
       onComplete()
     }
-  }
-  if (animFrame) cancelAnimationFrame(animFrame)
-  animFrame = requestAnimationFrame(frame)
+  )
 }
 
 function executeStep() {
@@ -464,7 +510,10 @@ function executeStep() {
   if (nextIdx >= steps.length) return
   const step = steps[nextIdx]
 
+  playback.pushHistory(currentStepIndex.value)
+
   const finish = () => {
+    prevStepSnapshot.value = currentStep.value ? { ...currentStep.value } : null
     step.apply()
     appendLog(step)
     currentStepIndex.value = nextIdx
@@ -479,21 +528,49 @@ function executeStep() {
 
 function start() {
   resetAll(false)
+  playback.clearHistory()
   mode.value = 'running'
   currentStepIndex.value = -1
+  prevStepSnapshot.value = null
   logEntries.value.push({
     stepNum: 0,
     stepName: '准备转发',
     summary: `H1(${srcIp}) 向 H2(${dstIp}) 发送数据报，点击「下一步」开始`,
   })
+  playback.pushHistory(-1)
 }
 
 function nextStep() {
   if (mode.value === 'running') executeStep()
 }
 
+function prevStep() {
+  if (!canPrev.value) return
+  if (currentStepIndex.value <= 0) {
+    playback.restorePrevious(0)
+    currentStepIndex.value = -1
+    activeRouter.value = null
+    highlightRow.value = -1
+    currentHop.value = ''
+    prevStepSnapshot.value = null
+    logEntries.value = logEntries.value.slice(0, 1)
+    return
+  }
+  const newIdx = currentStepIndex.value - 1
+  playback.restoreToIndex(newIdx - 1)
+  currentStepIndex.value = newIdx
+  logEntries.value = logEntries.value.slice(0, newIdx + 2)
+}
+
+function replayFromStart() {
+  resetAll(true)
+  start()
+}
+
 function resetAll(clearLogs = true) {
   if (animFrame) cancelAnimationFrame(animFrame)
+  playback.cancelAnimation()
+  playback.clearHistory()
   mode.value = 'idle'
   currentStepIndex.value = -1
   isAnimating.value = false
@@ -502,8 +579,19 @@ function resetAll(clearLogs = true) {
   activeRouter.value = null
   highlightRow.value = -1
   currentHop.value = ''
+  prevStepSnapshot.value = null
   if (clearLogs) logEntries.value = []
 }
+
+function onKeydown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+  if (e.code === 'Space') { e.preventDefault(); playback.togglePause() }
+  else if (e.code === 'ArrowRight' && canNextStep.value) nextStep()
+  else if (e.code === 'ArrowLeft' && canPrev.value) prevStep()
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 watch(logEntries, () => {
   nextTick(() => {

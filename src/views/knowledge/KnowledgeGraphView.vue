@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, shallowRef } from 'vue'
+import { ref, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import * as echarts from 'echarts/core'
 import { TreeChart } from 'echarts/charts'
 import { TooltipComponent } from 'echarts/components'
@@ -137,17 +137,24 @@ async function loadGraph() {
   loading.value = true
   error.value = ''
   selectedNode.value = null
+  chartInstance.value?.dispose()
+  chartInstance.value = null
+  let treeData = null
   try {
     const data = await getKnowledgeGraph()
     graphData.value = data
-    const treeData = transformGraphData(data)
-    renderChart(treeData)
+    treeData = transformGraphData(data)
   } catch (err) {
     graphData.value = null
     error.value = err.message || '加载知识图谱失败'
     chartInstance.value?.clear()
   } finally {
     loading.value = false
+  }
+  // 图表容器在 v-if="loading" 为 false 后才挂载，需等 DOM 就绪再 init
+  if (treeData) {
+    await nextTick()
+    renderChart(treeData)
   }
 }
 

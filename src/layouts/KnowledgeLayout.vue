@@ -1,8 +1,17 @@
 <script setup>
-import { useRoute, RouterLink, RouterView } from 'vue-router'
-import { Layers, GitGraph } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { useRoute, useRouter, RouterLink, RouterView } from 'vue-router'
+import { Layers, GitGraph, Search } from 'lucide-vue-next'
 
 const route = useRoute()
+const router = useRouter()
+const headerKeyword = ref('')
+
+function submitHeaderSearch() {
+  const q = headerKeyword.value.trim()
+  if (!q) return
+  router.push({ name: 'knowledge-search', query: { q } })
+}
 
 const layerTabs = [
   { to: '/knowledge/application', label: '应用层', name: 'knowledge-application' },
@@ -21,9 +30,26 @@ function isTabActive(tab) {
 
 <template>
   <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-    <div class="flex items-center gap-2 mb-4">
-      <Layers class="w-5 h-5 text-violet-600 shrink-0" />
-      <h1 class="text-lg md:text-xl font-semibold text-slate-900">TCP/IP 知识体系</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <Layers class="w-5 h-5 text-violet-600 shrink-0" />
+        <h1 class="text-lg md:text-xl font-semibold text-slate-900">TCP/IP 知识体系</h1>
+      </div>
+      <form class="flex gap-2 w-full sm:w-auto" @submit.prevent="submitHeaderSearch">
+        <input
+          v-model="headerKeyword"
+          type="search"
+          placeholder="搜索知识点…"
+          class="flex-1 sm:w-48 px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+        />
+        <button
+          type="submit"
+          class="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm inline-flex items-center gap-1"
+        >
+          <Search class="w-3.5 h-3.5" />
+          检索
+        </button>
+      </form>
     </div>
 
     <nav
@@ -47,6 +73,14 @@ function isTabActive(tab) {
       >
         <GitGraph class="w-3.5 h-3.5" />
         {{ graphTab.label }}
+      </RouterLink>
+      <RouterLink
+        to="/knowledge/search"
+        class="knowledge-tab inline-flex items-center gap-1.5"
+        :class="{ 'knowledge-tab-active': route.name === 'knowledge-search' }"
+      >
+        <Search class="w-3.5 h-3.5" />
+        知识检索
       </RouterLink>
     </nav>
 

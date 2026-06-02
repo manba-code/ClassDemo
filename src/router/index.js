@@ -37,6 +37,12 @@ const knowledgeLayerRoutes = [
     component: () => import('../views/knowledge/KnowledgeGraphView.vue'),
     meta: { title: '知识图谱 · 知识体系', nav: 'knowledge' },
   },
+  {
+    path: 'search',
+    name: 'knowledge-search',
+    component: () => import('../views/knowledge/KnowledgeSearchView.vue'),
+    meta: { title: '知识检索 · 知识体系', nav: 'knowledge' },
+  },
 ]
 
 const routes = [

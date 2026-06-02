@@ -2,20 +2,26 @@ server:
   port: 8080
   servlet:
     context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
     name: network-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/classdemo_network?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/classdemo_network?useUnicode=true&characterEncoding=utf-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: classdemo
     password: classdemo123
     hikari:
       maximum-pool-size: 10
+      connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
   sql:
     init:
       mode: always
+      encoding: UTF-8
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/seed.sql
       continue-on-error: false

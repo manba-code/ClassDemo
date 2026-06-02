@@ -149,39 +149,61 @@
         </div>
 
         <!-- Controls -->
-        <div
-          class="flex flex-wrap gap-2 p-4 rounded-xl border border-slate-200 bg-white shadow-sm"
-          role="toolbar"
-          aria-label="协议控制"
+        <PlaybackControls
+          :can-prev="canPrev"
+          :can-next="canNextStep"
+          :can-pause="isAnimating"
+          :is-paused="playback.isPaused.value"
+          :is-playing="playback.isPlaying.value"
+          :can-replay="mode !== 'idle'"
+          :can-reset="true"
+          :step-display="stepDisplay"
+          :playback-speed="playback.playbackSpeed.value"
+          :speed-options="playback.speedOptions"
+          :extra-disabled="false"
+          @prev="prevStep"
+          @next="nextStep"
+          @pause="playback.togglePause()"
+          @replay="replayFromStart"
+          @reset="resetAll()"
+          @speed="playback.setSpeed"
         >
-          <button
-            type="button"
-            class="btn-primary"
-            :disabled="controlsDisabled || mode === 'handshake'"
-            @click="startHandshake"
+          <template #leading>
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="controlsDisabled || mode === 'handshake' || mode === 'syn_timeout'"
+              @click="startHandshake"
+            >
+              建立连接
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              :disabled="controlsDisabled || mode !== 'established'"
+              @click="startWave"
+            >
+              释放连接
+            </button>
+          </template>
+        </PlaybackControls>
+
+        <!-- Demo mode -->
+        <div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm flex flex-wrap gap-2 items-center">
+          <span class="text-xs text-slate-500">演示模式：</span>
+          <label
+            v-for="m in demoModes"
+            :key="m.value"
+            class="px-3 py-1 rounded-lg border text-xs cursor-pointer"
+            :class="
+              demoMode === m.value
+                ? 'border-teal-300 bg-teal-50 text-teal-800'
+                : 'border-slate-200 text-slate-600'
+            "
           >
-            建立连接
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            :disabled="controlsDisabled || !canNextStep"
-            @click="nextStep"
-          >
-            下一步
-            <span class="text-slate-500 ml-1">({{ stepDisplay }})</span>
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            :disabled="controlsDisabled || mode !== 'established'"
-            @click="startWave"
-          >
-            释放连接
-          </button>
-          <button type="button" class="btn-ghost" :disabled="isAnimating" @click="resetAll">
-            重置
-          </button>
+            <input v-model="demoMode" type="radio" :value="m.value" class="sr-only" :disabled="mode !== 'idle'" />
+            {{ m.label }}
+          </label>
         </div>
 
         <!-- Result banner -->
@@ -363,6 +385,8 @@
           <p v-else class="text-xs text-slate-400 font-mono">等待协议步骤执行…</p>
         </div>
 
+        <PacketStructurePanel :layers="packetLayers" />
+
         <!-- Step flow log -->
         <div
           class="rounded-2xl border border-slate-200 bg-white flex flex-col flex-1 min-h-[280px] overflow-hidden shadow-sm"
@@ -403,8 +427,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
-import { Monitor, Server, FileCode, ListOrdered, Table2, CheckCircle2, XCircle } from 'lucide-vue-next'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { Monitor, Server, FileCode, ListOrdered, Table2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-vue-next'
+import { buildTcpPacketLayers } from '../utils/buildPacketLayers.js'
+import { usePlayback } from '../composables/usePlayback.js'
+import PlaybackControls from './PlaybackControls.vue'
+import PacketStructurePanel from './PacketStructurePanel.vue'
 
 /** @typedef {'CLOSED'|'LISTEN'|'SYN-SENT'|'SYN-RCVD'|'ESTABLISHED'|'FIN-WAIT-1'|'FIN-WAIT-2'|'CLOSE-WAIT'|'LAST-ACK'|'TIME-WAIT'} TcpState */
 
@@ -413,9 +441,15 @@ const serverMac = '00:AA:BB:CC:DD:EE'
 const clientIp = '192.168.1.100:52431'
 const serverIp = '203.0.113.50:443'
 
-const ANIM_MS = 900
+const ANIM_MS_BASE = ref(900)
 
-const mode = ref('idle') // idle | handshake | established | wave | done
+const demoModes = [
+  { value: 'normal', label: '正常握手/挥手' },
+  { value: 'syn_timeout', label: 'SYN 无响应（超时）' },
+]
+const demoMode = ref('normal')
+
+const mode = ref('idle') // idle | handshake | established | wave | done | syn_timeout
 const currentStepIndex = ref(-1)
 const clientState = ref('CLOSED')
 const serverState = ref('LISTEN')
@@ -430,7 +464,42 @@ const activePacket = ref(null)
 const packetProgress = ref(0)
 const logEntries = ref([])
 const currentDetail = ref(null)
+const prevDetail = ref(null)
 const logContainer = ref(null)
+
+function captureSnapshot() {
+  return {
+    mode: mode.value,
+    currentStepIndex: currentStepIndex.value,
+    clientState: clientState.value,
+    serverState: serverState.value,
+    clientIsn: clientIsn.value,
+    serverIsn: serverIsn.value,
+    clientNextSeq: clientNextSeq.value,
+    serverNextSeq: serverNextSeq.value,
+    currentDetail: currentDetail.value ? { ...currentDetail.value, flags: [...(currentDetail.value.flags ?? [])] } : null,
+    prevDetail: prevDetail.value ? { ...prevDetail.value, flags: [...(prevDetail.value.flags ?? [])] } : null,
+    logEntries: logEntries.value.map((e) => ({ ...e })),
+  }
+}
+
+function restoreSnapshot(snap) {
+  mode.value = snap.mode
+  currentStepIndex.value = snap.currentStepIndex
+  clientState.value = snap.clientState
+  serverState.value = snap.serverState
+  clientIsn.value = snap.clientIsn
+  serverIsn.value = snap.serverIsn
+  clientNextSeq.value = snap.clientNextSeq
+  serverNextSeq.value = snap.serverNextSeq
+  currentDetail.value = snap.currentDetail
+  prevDetail.value = snap.prevDetail
+  logEntries.value = snap.logEntries.map((e) => ({ ...e }))
+}
+
+const playback = usePlayback({ captureSnapshot, restoreSnapshot, baseAnimMsRef: ANIM_MS_BASE })
+
+const packetLayers = computed(() => buildTcpPacketLayers(currentDetail.value, prevDetail.value))
 
 let animFrame = null
 
@@ -445,12 +514,21 @@ const phaseLabel = computed(() => {
   return map[mode.value] ?? mode.value
 })
 
-const controlsDisabled = computed(() => isAnimating.value)
+const controlsDisabled = computed(() => isAnimating.value || playback.isPlaying.value)
+
+const canPrev = computed(() => {
+  if (controlsDisabled.value) return false
+  if (mode.value === 'handshake' || mode.value === 'wave' || mode.value === 'syn_timeout') {
+    return currentStepIndex.value >= 0
+  }
+  return false
+})
 
 const canNextStep = computed(() => {
   if (isAnimating.value) return false
   if (mode.value === 'handshake') return currentStepIndex.value < handshakeSteps.length - 1
   if (mode.value === 'wave') return currentStepIndex.value < waveSteps.length - 1
+  if (mode.value === 'syn_timeout') return currentStepIndex.value < synTimeoutSteps.length - 1
   return false
 })
 
@@ -570,11 +648,10 @@ function appendLog(step, packet, summary) {
     stepName: step.name,
     summary: summary ?? step.desc,
   })
+  prevDetail.value = currentDetail.value ? { ...currentDetail.value, flags: [...(currentDetail.value.flags ?? [])] } : null
   currentDetail.value = buildDetail(step, packet)
   nextTick(() => {
-    if (logContainer.value) {
-      logContainer.value.scrollTop = logContainer.value.scrollHeight
-    }
+    if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight
   })
 }
 
@@ -582,22 +659,18 @@ function runPacketAnimation(packet, onComplete) {
   activePacket.value = packet
   isAnimating.value = true
   packetProgress.value = 0
-  const start = performance.now()
+  const duration = ANIM_MS_BASE.value / playback.playbackSpeed.value
 
-  function frame(now) {
-    const t = Math.min(1, (now - start) / ANIM_MS)
-    packetProgress.value = easeInOutCubic(t)
-    if (t < 1) {
-      animFrame = requestAnimationFrame(frame)
-    } else {
+  playback.runPausableAnimation(
+    duration,
+    (t) => { packetProgress.value = easeInOutCubic(t) },
+    () => {
       isAnimating.value = false
       activePacket.value = null
       packetProgress.value = 0
       onComplete()
     }
-  }
-  if (animFrame) cancelAnimationFrame(animFrame)
-  animFrame = requestAnimationFrame(frame)
+  )
 }
 
 function easeInOutCubic(t) {
@@ -791,6 +864,7 @@ function executeStep(steps) {
   const nextIdx = currentStepIndex.value + 1
   if (nextIdx >= steps.length) return
 
+  playback.pushHistory(currentStepIndex.value)
   const step = steps[nextIdx]
   const packet = resolvePacket(step.packet)
 
@@ -807,8 +881,59 @@ function executeStep(steps) {
   }
 }
 
-function startHandshake() {
+/** SYN 超时演示步骤 */
+const synTimeoutSteps = [
+  {
+    stepNum: 1,
+    name: '发送 SYN',
+    desc: 'Client 发送 SYN，Server 不响应',
+    packet: { direction: 'c2s', label: 'SYN', flags: ['SYN'], seq: () => clientIsn.value, ack: null },
+    apply() { clientState.value = 'SYN-SENT' },
+    summary(p) { return `SYN seq=${p.seq} → Server（无响应）` },
+  },
+  {
+    stepNum: 2,
+    name: 'SYN 重传 #1',
+    desc: '超时后第 1 次重传',
+    packet: { direction: 'c2s', label: 'SYN retry', flags: ['SYN'], seq: () => clientIsn.value, ack: null },
+    apply() { clientState.value = 'SYN-SENT' },
+    summary(p) { return `SYN 重传 #1 seq=${p.seq}` },
+  },
+  {
+    stepNum: 3,
+    name: 'SYN 重传 #2 后失败',
+    desc: '连接建立失败，Client 回到 CLOSED',
+    packet: null,
+    apply() {
+      clientState.value = 'CLOSED'
+      mode.value = 'done'
+    },
+    summary() { return 'TCP_TIMEOUT：Server 未响应，连接失败' },
+  },
+]
+
+function startSynTimeout() {
   resetAll(false)
+  playback.clearHistory()
+  mode.value = 'syn_timeout'
+  currentStepIndex.value = -1
+  clientState.value = 'CLOSED'
+  serverState.value = 'LISTEN'
+  logEntries.value.push({
+    stepNum: 0,
+    stepName: 'SYN 超时演示',
+    summary: 'Server 不响应 SYN，观察重传与超时失败',
+  })
+  playback.pushHistory(-1)
+}
+
+function startHandshake() {
+  if (demoMode.value === 'syn_timeout') {
+    startSynTimeout()
+    return
+  }
+  resetAll(false)
+  playback.clearHistory()
   mode.value = 'handshake'
   currentStepIndex.value = -1
   clientState.value = 'CLOSED'
@@ -822,6 +947,7 @@ function startHandshake() {
     stepName: '准备握手',
     summary: 'Client=CLOSED, Server=LISTEN，点击「下一步」开始三次握手',
   })
+  playback.pushHistory(-1)
 }
 
 function startWave() {
@@ -838,10 +964,40 @@ function startWave() {
 function nextStep() {
   if (mode.value === 'handshake') executeStep(handshakeSteps)
   else if (mode.value === 'wave') executeStep(waveSteps)
+  else if (mode.value === 'syn_timeout') executeStep(synTimeoutSteps)
+}
+
+function prevStep() {
+  if (!canPrev.value) return
+  if (currentStepIndex.value <= 0) {
+    playback.restorePrevious(0)
+    currentStepIndex.value = -1
+    clientState.value = demoMode.value === 'syn_timeout' ? 'CLOSED' : 'CLOSED'
+    serverState.value = 'LISTEN'
+    currentDetail.value = null
+    prevDetail.value = null
+    logEntries.value = logEntries.value.slice(0, 1)
+    if (mode.value === 'done') mode.value = demoMode.value === 'syn_timeout' ? 'syn_timeout' : 'handshake'
+    return
+  }
+  const newIdx = currentStepIndex.value - 1
+  playback.restoreToIndex(newIdx - 1)
+  currentStepIndex.value = newIdx
+  logEntries.value = logEntries.value.slice(0, newIdx + 2)
+}
+
+function replayFromStart() {
+  const savedDemo = demoMode.value
+  resetAll(true)
+  demoMode.value = savedDemo
+  if (savedDemo === 'syn_timeout') startSynTimeout()
+  else startHandshake()
 }
 
 function resetAll(clearLogs = true) {
   if (animFrame) cancelAnimationFrame(animFrame)
+  playback.cancelAnimation()
+  playback.clearHistory()
   mode.value = 'idle'
   currentStepIndex.value = -1
   clientState.value = 'CLOSED'
@@ -854,8 +1010,19 @@ function resetAll(clearLogs = true) {
   activePacket.value = null
   packetProgress.value = 0
   currentDetail.value = null
+  prevDetail.value = null
   if (clearLogs) logEntries.value = []
 }
+
+function onKeydown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+  if (e.code === 'Space') { e.preventDefault(); playback.togglePause() }
+  else if (e.code === 'ArrowRight' && canNextStep.value) nextStep()
+  else if (e.code === 'ArrowLeft' && canPrev.value) prevStep()
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 watch(logEntries, () => {
   nextTick(() => {
