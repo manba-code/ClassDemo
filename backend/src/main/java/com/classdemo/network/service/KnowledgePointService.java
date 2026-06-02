@@ -144,6 +144,20 @@ public class KnowledgePointService {
                 mapper.selectCount(new LambdaQueryWrapper<KnowledgePoint>()));
     }
 
+    /**
+     * 查询某层全部知识点（不分页，供知识图谱聚合使用）。
+     */
+    public List<KnowledgePointDto> listAll(String layerKey) {
+        return router.execute(layerKey, mapper -> {
+            LambdaQueryWrapper<KnowledgePoint> wrapper = new LambdaQueryWrapper<>();
+            wrapper.orderByAsc(KnowledgePoint::getSortOrder)
+                    .orderByDesc(KnowledgePoint::getId);
+            return mapper.selectList(wrapper).stream()
+                    .map(converter::toDto)
+                    .toList();
+        });
+    }
+
     private LambdaQueryWrapper<KnowledgePoint> buildKeywordWrapper(String keyword) {
         LambdaQueryWrapper<KnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
