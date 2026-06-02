@@ -1,0 +1,24 @@
+# 模块三阶段 A：本地 MySQL 8（与 application.yml 账号一致）
+# 启动：docker compose -f backend/docker-compose.yml up -d
+# 停止：docker compose -f backend/docker-compose.yml down
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: classdemo-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: classdemo_network
+      MYSQL_USER: classdemo
+      MYSQL_PASSWORD: classdemo123
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uclassdemo", "-pclassdemo123"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
