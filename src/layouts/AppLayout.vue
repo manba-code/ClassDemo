@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { Network, Home, GitBranch, Route, Globe } from 'lucide-vue-next'
+import { Network, Home, GitBranch, Route, Globe, Layers } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -12,6 +12,16 @@ const protocolLinks = [
 
 const isActive = (path) => route.path === path
 const isProtocolSection = computed(() => route.path.startsWith('/protocol'))
+const isKnowledgeSection = computed(() => route.path.startsWith('/knowledge'))
+
+const knowledgeLinks = [
+  { to: '/knowledge/application', label: '应用层' },
+  { to: '/knowledge/transport', label: '传输层' },
+  { to: '/knowledge/network', label: '网络层' },
+  { to: '/knowledge/datalink', label: '数据链路层' },
+  { to: '/knowledge/physical', label: '物理层' },
+  { to: '/knowledge/graph', label: '知识图谱' },
+]
 </script>
 
 <template>
@@ -72,7 +82,36 @@ const isProtocolSection = computed(() => route.path.startsWith('/protocol'))
               <Globe class="w-4 h-4" />
               <span class="hidden sm:inline">综合场景</span>
             </RouterLink>
+
+            <RouterLink
+              to="/knowledge/application"
+              class="nav-link"
+              :class="{ 'nav-link-active': isKnowledgeSection }"
+            >
+              <Layers class="w-4 h-4" />
+              <span class="hidden sm:inline">知识体系</span>
+            </RouterLink>
           </nav>
+        </div>
+
+        <!-- Mobile knowledge tabs -->
+        <div
+          v-if="isKnowledgeSection"
+          class="flex gap-2 pb-3 overflow-x-auto sm:hidden"
+        >
+          <RouterLink
+            v-for="link in knowledgeLinks"
+            :key="link.to"
+            :to="link.to"
+            class="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+            :class="
+              isActive(link.to)
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'bg-white text-slate-600 border-slate-200'
+            "
+          >
+            {{ link.label }}
+          </RouterLink>
         </div>
 
         <!-- Mobile protocol tabs -->

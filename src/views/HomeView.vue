@@ -29,11 +29,11 @@ const modules = [
   },
   {
     title: '知识体系学习模块',
-    desc: 'TCP/IP 五层模型知识点管理与知识图谱（第三部分，待开发）。',
-    to: null,
+    desc: 'TCP/IP 五层模型知识点管理、分页检索与知识图谱可视化（第三部分）。',
+    to: '/knowledge/application',
     icon: Layers,
-    color: 'slate',
-    status: '待开发',
+    color: 'violet',
+    status: '可进入',
   },
 ]
 
@@ -57,6 +57,11 @@ const colorMap = {
     card: 'border-emerald-200 hover:border-emerald-300 hover:shadow-emerald-100',
     icon: 'bg-emerald-100 text-emerald-700',
     badge: 'bg-emerald-100 text-emerald-700',
+  },
+  violet: {
+    card: 'border-violet-200 hover:border-violet-300 hover:shadow-violet-100',
+    icon: 'bg-violet-100 text-violet-700',
+    badge: 'bg-violet-100 text-violet-700',
   },
 }
 </script>

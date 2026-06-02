@@ -1,5 +1,44 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+const knowledgeLayerRoutes = [
+  {
+    path: 'application',
+    name: 'knowledge-application',
+    component: () => import('../views/knowledge/KnowledgeLayerPage.vue'),
+    meta: { title: '应用层 · 知识体系', layerKey: 'application', nav: 'knowledge' },
+  },
+  {
+    path: 'transport',
+    name: 'knowledge-transport',
+    component: () => import('../views/knowledge/KnowledgeLayerPage.vue'),
+    meta: { title: '传输层 · 知识体系', layerKey: 'transport', nav: 'knowledge' },
+  },
+  {
+    path: 'network',
+    name: 'knowledge-network',
+    component: () => import('../views/knowledge/KnowledgeLayerPage.vue'),
+    meta: { title: '网络层 · 知识体系', layerKey: 'network', nav: 'knowledge' },
+  },
+  {
+    path: 'datalink',
+    name: 'knowledge-datalink',
+    component: () => import('../views/knowledge/KnowledgeLayerPage.vue'),
+    meta: { title: '数据链路层 · 知识体系', layerKey: 'datalink', nav: 'knowledge' },
+  },
+  {
+    path: 'physical',
+    name: 'knowledge-physical',
+    component: () => import('../views/knowledge/KnowledgeLayerPage.vue'),
+    meta: { title: '物理层 · 知识体系', layerKey: 'physical', nav: 'knowledge' },
+  },
+  {
+    path: 'graph',
+    name: 'knowledge-graph',
+    component: () => import('../views/knowledge/KnowledgeGraphView.vue'),
+    meta: { title: '知识图谱 · 知识体系', nav: 'knowledge' },
+  },
+]
+
 const routes = [
   {
     path: '/',
@@ -24,6 +63,12 @@ const routes = [
     name: 'scenario',
     component: () => import('../views/ScenarioView.vue'),
     meta: { title: '综合网络场景模拟', nav: 'scenario' },
+  },
+  {
+    path: '/knowledge',
+    component: () => import('../layouts/KnowledgeLayout.vue'),
+    redirect: '/knowledge/application',
+    children: knowledgeLayerRoutes,
   },
 ]
 
