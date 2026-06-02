@@ -217,9 +217,7 @@ npm run preview
 
 编辑 `backend/src/main/resources/application.yml` 可修改 MySQL 连接信息。默认：
 
-- URL：`jdbc:mysql://localhost:3306/classdemo_network`
-- 用户名：`classdemo`
-- 密码：`classdemo123`
+
 
 若中文显示乱码，可参考 `backend/scripts/fix-encoding-reseed.sql` 修复字符集后重新导入种子数据。
 
