@@ -1,11 +1,11 @@
 # 计算机网络知识体系交互式展示系统 — 产品需求文档（PRD）
 
-| 文档版本 | v1.2 |
+| 文档版本 | v1.3 |
 |---------|------|
 | 编写日期 | 2026-06-01 |
 | 适用课程 | 《网络实习》 |
 | 项目名称 | 计算机网络知识体系交互式展示系统 |
-| 文档状态 | 已更新（第三部分后端选型 Java） |
+| 文档状态 | 已更新（第三部分后端 Java + MySQL） |
 
 ---
 
@@ -32,10 +32,10 @@
 | 前端 | Vue 3 + Vite + Vue Router + Tailwind CSS + lucide-vue-next 图标 |
 | 后端（第三部分） | **Java 17+ / Spring Boot 3** + REST API（待开发） |
 | 持久层 | **MyBatis-Plus** 或 Spring Data JPA（二选一，推荐 MyBatis-Plus） |
-| 数据库 | SQLite（开发/演示）+ 建表 SQL 脚本（待开发） |
+| 数据库 | **MySQL 8.x**（本地/演示）+ 建表 SQL 脚本（待开发） |
 | 知识图谱 | 前端 JS 渲染（不要求图数据库存储，待开发） |
 
-### 1.4 实现现状摘要（截至 v1.2）
+### 1.4 实现现状摘要（截至 v1.3）
 
 | 模块 | 状态 | 关键文件 |
 |------|------|----------|
@@ -323,7 +323,7 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 | BE-02 | 统一 JSON 响应包装（`code` / `message` / `data`） | P0 |
 | BE-03 | 全局异常处理，参数校验失败返回 40001 | P0 |
 | BE-04 | 配置 CORS，允许 Vue 开发服务器（`localhost:5173`）跨域访问 | P0 |
-| BE-05 | 应用启动时自动执行 `schema.sql`、`seed.sql` 初始化 SQLite | P0 |
+| BE-05 | 应用启动时自动执行 `schema.sql`、`seed.sql` 初始化 MySQL（需预先创建空库） | P0 |
 | BE-06 | Controller / Service / Mapper 分层，五层知识点分表访问 | P0 |
 | BE-07 | 本地演示无登录鉴权 | — |
 
@@ -343,17 +343,17 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 | KN-06 | 编辑知识点 | P0 | PUT API |
 | KN-07 | 删除知识点 | P0 | DELETE API |
 | KN-08 | 关键词模糊查询 | P0 | GET API `keyword` 参数 |
-| KN-09 | 修改持久化，刷新不丢失 | P0 | SQLite（Java 后端读写） |
+| KN-09 | 修改持久化，刷新不丢失 | P0 | MySQL（Java 后端读写） |
 
 **知识点字段**
 
-| 字段 | 类型 | 必填 | 说明 |
+| 字段 | 类型（MySQL） | 必填 | 说明 |
 |------|------|------|------|
-| id | INTEGER | 自动 | 主键 |
-| title | TEXT | 是 | 知识点标题 |
+| id | BIGINT AUTO_INCREMENT | 自动 | 主键 |
+| title | VARCHAR(255) | 是 | 知识点标题 |
 | content | TEXT | 是 | 详细内容 |
-| tags | TEXT | 否 | 标签，逗号分隔 |
-| sort_order | INTEGER | 否 | 排序权重，默认 0 |
+| tags | VARCHAR(512) | 否 | 标签，逗号分隔 |
+| sort_order | INT | 否 | 排序权重，默认 0 |
 | created_at | DATETIME | 自动 | 创建时间 |
 | updated_at | DATETIME | 自动 | 更新时间 |
 
@@ -391,7 +391,7 @@ Server: ESTABLISHED → CLOSE-WAIT → LAST-ACK → CLOSED
 | NFR-02 | 性能 | 协议动画流畅，单页切换 < 500ms |
 | NFR-03 | 可维护性 | 前后端分离，目录结构清晰 |
 | NFR-04 | 安全 | 本地教学演示，无鉴权；生产环境不在范围 |
-| NFR-05 | 部署 | 前端 `npm run dev`（5173）；Java 后端 `mvn spring-boot:run` 或 IDE 启动（8080）；提供 README |
+| NFR-05 | 部署 | 前端 `npm run dev`（5173）；本地 MySQL 8.x 已启动；Java 后端 `mvn spring-boot:run` 或 IDE 启动（8080）；提供 README |
 | NFR-06 | 规范 | Git 分阶段 commit，禁止一次性提交全部代码 |
 
 ---
@@ -412,14 +412,14 @@ knowledge_* 五张表结构相同，分表存储（符合指导书要求）
 
 ```sql
 CREATE TABLE layer_info (
-  id          INTEGER PRIMARY KEY,  -- 1~5 对应五层
-  layer_key   TEXT NOT NULL UNIQUE, -- application|transport|network|datalink|physical
-  layer_name  TEXT NOT NULL,        -- 应用层|传输层|...
-  main_function   TEXT NOT NULL,    -- 主要功能（Markdown 或纯文本）
-  protocols       TEXT NOT NULL,    -- 常见协议，JSON 数组或逗号分隔
-  devices_units   TEXT NOT NULL,    -- 设备/数据单位
-  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+  id              INT PRIMARY KEY,              -- 1~5 对应五层
+  layer_key       VARCHAR(32) NOT NULL UNIQUE,    -- application|transport|network|datalink|physical
+  layer_name      VARCHAR(64) NOT NULL,         -- 应用层|传输层|...
+  main_function   TEXT NOT NULL,                  -- 主要功能（Markdown 或纯文本）
+  protocols       TEXT NOT NULL,                  -- 常见协议，JSON 数组或逗号分隔
+  devices_units   VARCHAR(512) NOT NULL,          -- 设备/数据单位
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ### 6.3 表：各层知识点表（结构相同）
@@ -437,23 +437,37 @@ CREATE TABLE layer_info (
 ```sql
 -- 以 application 层为例，其余四层结构一致
 CREATE TABLE knowledge_application (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  title       TEXT NOT NULL,
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  title       VARCHAR(255) NOT NULL,
   content     TEXT NOT NULL,
-  tags        TEXT DEFAULT '',
-  sort_order  INTEGER DEFAULT 0,
+  tags        VARCHAR(512) DEFAULT '',
+  sort_order  INT DEFAULT 0,
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX idx_knowledge_application_title ON knowledge_application(title);
 ```
 
-### 6.4 初始数据
+### 6.4 初始数据与环境准备
 
-- 提供 `backend/src/main/resources/db/schema.sql` 建表脚本
+**MySQL 前置条件**
+
+1. 安装 MySQL 8.x（本地或 Docker 均可）
+2. 创建数据库与用户：执行 `backend/scripts/init-mysql.sql`，或手动执行以下 SQL：
+
+```sql
+CREATE DATABASE classdemo_network DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'classdemo'@'localhost' IDENTIFIED BY 'classdemo123';
+GRANT ALL PRIVILEGES ON classdemo_network.* TO 'classdemo'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+**脚本与初始化**
+
+- 提供 `backend/src/main/resources/db/schema.sql` 建表脚本（MySQL 语法）
 - 提供 `backend/src/main/resources/db/seed.sql` 每层至少 5 条示例知识点
-- SQLite 数据库文件 `backend/data/network.db`，或在首次启动时由 Spring Boot `spring.sql.init.*` 自动初始化
+- 首次启动时由 Spring Boot `spring.sql.init.*` 自动执行 schema/seed（需目标库已存在且为空）
 
 **Spring Boot 配置示例（`application.yml`）**
 
@@ -463,14 +477,18 @@ server:
 
 spring:
   datasource:
-    url: jdbc:sqlite:./data/network.db
-    driver-class-name: org.sqlite.JDBC
+    url: jdbc:mysql://localhost:3306/classdemo_network?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: classdemo
+    password: classdemo123
   sql:
     init:
       mode: always
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/seed.sql
 ```
+
+> 生产或多人协作时，可将 `spring.sql.init.mode` 改为 `never`，改用手动执行 SQL 或 Flyway/Liquibase 管理迁移。
 
 ---
 
@@ -879,9 +897,9 @@ ClassDemo/
 │   ├── App.vue
 │   └── main.js
 ├── backend/                         # Java 后端（第三部分，待开发）
-│   ├── pom.xml                      # Maven 依赖：Spring Boot、SQLite JDBC、MyBatis-Plus
-│   ├── data/
-│   │   └── network.db               # SQLite 数据库文件（运行时生成）
+│   ├── pom.xml                      # Maven 依赖：Spring Boot、MySQL Connector/J、MyBatis-Plus
+│   ├── scripts/
+│   │   └── init-mysql.sql           # MySQL 建库建用户脚本
 │   └── src/main/
 │       ├── java/com/classdemo/network/
 │       │   ├── NetworkApplication.java
@@ -937,7 +955,7 @@ ClassDemo/
 
 - [ ] 五层 + 知识图谱共 6 个 Tab
 - [ ] Java Spring Boot 后端可独立启动（8080）
-- [ ] 知识点存 SQLite 数据库
+- [ ] 知识点存 MySQL 数据库
 - [ ] 增删改查 + 模糊查询 + 分页
 - [ ] 刷新后数据不丢失
 - [ ] 前端 Vite 代理 `/api` → 8080 联调通过
@@ -970,7 +988,7 @@ ClassDemo/
 | JDK | 17 或 21（LTS） |
 | Spring Boot | ^3.2 |
 | MyBatis-Plus | ^3.5（或 Spring Data JPA） |
-| SQLite JDBC | 最新稳定版（`org.xerial:sqlite-jdbc`） |
+| MySQL Connector/J | 最新稳定版（`com.mysql:mysql-connector-j`） |
 | Maven | ≥ 3.8 |
 
 ### 12.2 参考资料
@@ -986,3 +1004,4 @@ ClassDemo/
 | v1.0 | 2026-06-01 | 初稿，基于指导书与题目 2 选型 |
 | v1.1 | 2026-06-01 | 对齐已实现页面：题目 2 TCP、题目 5 路由转发；更新信息架构、目录结构与验收清单 |
 | v1.2 | 2026-06-01 | 第三部分后端选型改为 Java Spring Boot；更新 API 端口、目录结构、部署与验收说明 |
+| v1.3 | 2026-06-02 | 第三部分持久层选型改为 MySQL 8.x；更新建表 SQL、数据源配置与验收说明 |
