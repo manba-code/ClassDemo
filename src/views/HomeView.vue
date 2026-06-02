@@ -21,11 +21,11 @@ const modules = [
   },
   {
     title: '综合网络场景模拟',
-    desc: 'H1 访问 www.abc.com 从 t0 到 t1 的完整通信过程（第二部分，待开发）。',
-    to: null,
+    desc: 'H1 访问 www.abc.com 从 t0 到 t1：ARP、DNS、TCP、HTTP 分步演示，ARP 表与交换表动态更新。',
+    to: '/scenario',
     icon: Globe,
-    color: 'slate',
-    status: '待开发',
+    color: 'emerald',
+    status: '已完成',
   },
   {
     title: '知识体系学习模块',
@@ -52,6 +52,11 @@ const colorMap = {
     card: 'border-slate-200 opacity-75',
     icon: 'bg-slate-100 text-slate-500',
     badge: 'bg-slate-100 text-slate-500',
+  },
+  emerald: {
+    card: 'border-emerald-200 hover:border-emerald-300 hover:shadow-emerald-100',
+    icon: 'bg-emerald-100 text-emerald-700',
+    badge: 'bg-emerald-100 text-emerald-700',
   },
 }
 </script>

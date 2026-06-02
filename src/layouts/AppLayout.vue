@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { Network, Home, GitBranch, Route } from 'lucide-vue-next'
+import { Network, Home, GitBranch, Route, Globe } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -63,6 +63,15 @@ const isProtocolSection = computed(() => route.path.startsWith('/protocol'))
                 </div>
               </div>
             </div>
+
+            <RouterLink
+              to="/scenario"
+              class="nav-link"
+              :class="{ 'nav-link-active': route.name === 'scenario' }"
+            >
+              <Globe class="w-4 h-4" />
+              <span class="hidden sm:inline">综合场景</span>
+            </RouterLink>
           </nav>
         </div>
 

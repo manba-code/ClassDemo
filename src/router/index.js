@@ -19,6 +19,12 @@ const routes = [
     component: () => import('../views/protocol/RoutingView.vue'),
     meta: { title: '路由转发', nav: 'protocol' },
   },
+  {
+    path: '/scenario',
+    name: 'scenario',
+    component: () => import('../views/ScenarioView.vue'),
+    meta: { title: '综合网络场景模拟', nav: 'scenario' },
+  },
 ]
 
 const router = createRouter({
